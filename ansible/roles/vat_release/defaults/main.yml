@@ -1,0 +1,9 @@
+vat_app_root: /opt/vat
+vat_user: vat
+vat_group: vat
+vat_java_bin: /usr/bin/java
+release_version: ""
+jfrog_url: "{{ lookup('env', 'JFROG_URL') }}"
+jfrog_repo: ""
+jfrog_token: "{{ lookup('env', 'JFROG_TOKEN') }}"
+artifact_sha256: "{{ lookup('env', 'ARTIFACT_SHA256') | default('', true) }}"

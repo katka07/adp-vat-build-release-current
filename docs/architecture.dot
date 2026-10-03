@@ -1,0 +1,25 @@
+digraph architecture {
+  rankdir=LR;
+  graph [fontname="Arial", bgcolor="white", pad="0.3", nodesep="0.4", ranksep="0.5"];
+  node [shape=box, style="rounded", fontname="Arial", fontsize=10];
+  edge [fontname="Arial", fontsize=9];
+
+  dev [label="Developer / Git"];
+  jenkins [label="Jenkins"];
+  maven [label="Maven + JUnit\nSurefire / Failsafe"];
+  sonar [label="SonarQube"];
+  jfrog_c [label="JFrog\nCandidate Repo"];
+  qa [label="Unified QA / SQA Stage\nQA hosts + qualification + regression/approval"];
+  jfrog_p [label="JFrog\nProduction Repo"];
+  prod [label="Production Hosts\ncurrent + previous symlinks"];
+  ansible [label="Ansible"];
+
+  dev -> jenkins -> maven;
+  maven -> sonar;
+  maven -> jfrog_c;
+  ansible -> qa;
+  jfrog_c -> qa [label="exact JAR"];
+  qa -> jfrog_p [label="QA/SQA approve + promote"];
+  ansible -> prod;
+  jfrog_p -> prod [label="exact JAR"];
+}

@@ -1,0 +1,114 @@
+---
+- name: Validate release inputs
+  assert:
+    that:
+      - release_version | length > 0
+      - jfrog_url | length > 0
+      - jfrog_repo | length > 0
+      - jfrog_token | length > 0
+    fail_msg: "release_version, JFROG_URL, jfrog_repo and JFROG_TOKEN are required"
+
+- name: Create VAT group
+  become: true
+  group:
+    name: "{{ vat_group }}"
+    system: true
+
+- name: Create VAT user
+  become: true
+  user:
+    name: "{{ vat_user }}"
+    group: "{{ vat_group }}"
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create release directories
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ vat_user }}"
+    group: "{{ vat_group }}"
+    mode: '0755'
+  loop:
+    - "{{ vat_app_root }}"
+    - "{{ vat_app_root }}/releases"
+    - "{{ vat_app_root }}/releases/{{ release_version }}"
+    - "{{ vat_app_root }}/logs"
+    - "{{ vat_app_root }}/data"
+
+- name: Read current release before deployment
+  become: true
+  command: "readlink -f {{ vat_app_root }}/current"
+  register: vat_current_release
+  changed_when: false
+  failed_when: false
+
+- name: Preserve previous release pointer
+  become: true
+  file:
+    src: "{{ vat_current_release.stdout }}"
+    dest: "{{ vat_app_root }}/previous"
+    state: link
+    force: true
+  when:
+    - vat_current_release.rc == 0
+    - vat_current_release.stdout | length > 0
+
+- name: Download immutable JAR from Artifactory with checksum validation
+  become: true
+  get_url:
+    url: "{{ jfrog_url }}/artifactory/{{ jfrog_repo }}/com/example/vat/vat-processing-service/{{ release_version }}/vat-processing-service-{{ release_version }}.jar"
+    dest: "{{ vat_app_root }}/releases/{{ release_version }}/vat-processing-service-{{ release_version }}.jar"
+    owner: "{{ vat_user }}"
+    group: "{{ vat_group }}"
+    mode: '0444'
+    force: false
+    headers:
+      Authorization: "Bearer {{ jfrog_token }}"
+    checksum: "{{ ('sha256:' + artifact_sha256) if artifact_sha256 | length > 0 else omit }}"
+  no_log: true
+
+- name: Write release metadata
+  become: true
+  copy:
+    dest: "{{ vat_app_root }}/releases/{{ release_version }}/release.properties"
+    owner: "{{ vat_user }}"
+    group: "{{ vat_group }}"
+    mode: '0444'
+    content: |
+      version={{ release_version }}
+      repository={{ jfrog_repo }}
+      deployed_at={{ ansible_date_time.iso8601 }}
+
+- name: Verify downloaded JAR version before activation
+  become: true
+  command: "{{ vat_java_bin }} -jar {{ vat_app_root }}/releases/{{ release_version }}/vat-processing-service-{{ release_version }}.jar version"
+  register: vat_release_version
+  changed_when: false
+
+- name: Assert downloaded JAR version
+  assert:
+    that:
+      - vat_release_version.stdout | trim == release_version
+    fail_msg: "Downloaded JAR version does not match requested release"
+
+- name: Point current symlink to new release
+  become: true
+  file:
+    src: "{{ vat_app_root }}/releases/{{ release_version }}"
+    dest: "{{ vat_app_root }}/current"
+    state: link
+    force: true
+
+- name: Verify activated release
+  become: true
+  command: "{{ vat_java_bin }} -jar {{ vat_app_root }}/current/vat-processing-service-{{ release_version }}.jar version"
+  register: vat_active_version
+  changed_when: false
+
+- name: Assert active version
+  assert:
+    that:
+      - vat_active_version.stdout | trim == release_version

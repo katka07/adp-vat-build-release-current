@@ -1,0 +1,11 @@
+.git
+.gitignore
+Jenkinsfile
+ansible/
+qa-sqa-tests/
+docs/
+config/
+qa-sqa-record/
+*.md
+target/surefire-reports/
+target/failsafe-reports/

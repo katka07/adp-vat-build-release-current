@@ -1,0 +1,50 @@
+---
+- name: Verify deployed VAT release
+  hosts: all
+  gather_facts: false
+  vars:
+    vat_app_root: /opt/vat
+    vat_java_bin: /usr/bin/java
+  tasks:
+    - name: Resolve active release directory
+      become: true
+      command: "readlink -f {{ vat_app_root }}/current"
+      register: active_release
+      changed_when: false
+
+    - name: Read deployed version metadata
+      become: true
+      slurp:
+        src: "{{ active_release.stdout }}/release.properties"
+      register: release_properties
+
+    - name: Get active JAR path
+      become: true
+      find:
+        paths: "{{ active_release.stdout }}"
+        patterns: 'vat-processing-service-*.jar'
+        file_type: file
+      register: deployed_jars
+
+    - name: Require exactly one JAR in active release
+      assert:
+        that:
+          - deployed_jars.matched == 1
+
+    - name: Verify version command
+      become: true
+      command: "{{ vat_java_bin }} -jar {{ deployed_jars.files[0].path }} version"
+      register: version_check
+      changed_when: false
+
+    - name: Run controlled production-safe calculation check
+      become: true
+      command: "{{ vat_java_bin }} -jar {{ deployed_jars.files[0].path }} calculate PROD-VERIFY GB STANDARD 100.00"
+      register: calculation_check
+      changed_when: false
+
+    - name: Assert representative calculation
+      assert:
+        that:
+          - '"\"vatAmount\": \"20.00\"" in calculation_check.stdout'
+          - '"\"grossAmount\": \"120.00\"" in calculation_check.stdout'

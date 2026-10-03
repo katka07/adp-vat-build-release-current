@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example.vat</groupId>
+  <artifactId>vat-processing-service</artifactId>
+  <version>${revision}</version>
+  <packaging>jar</packaging>
+
+  <name>VAT Processing Service</name>
+  <description>Enterprise Build and Release training project with Maven, JFrog, Jenkins and Ansible promotion.</description>
+
+  <properties>
+    <!-- Safe local default comes from .mvn/maven.config. Production CI overrides -Drevision. -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>25</maven.compiler.release>
+    <junit.version>6.1.2</junit.version>
+    <maven.minimum.version>3.10.0</maven.minimum.version>
+
+    <!-- JFrog endpoint/repository names are injected by environment/Jenkins, not secrets. -->
+    <jfrog.url>${env.JFROG_URL}</jfrog.url>
+    <jfrog.resolve.repo>${env.JFROG_MAVEN_VIRTUAL_REPO}</jfrog.resolve.repo>
+    <jfrog.candidate.repo>${env.JFROG_CANDIDATE_REPO}</jfrog.candidate.repo>
+    <jfrog.snapshot.repo>${env.JFROG_SNAPSHOT_REPO}</jfrog.snapshot.repo>
+    <jfrog.production.repo>${env.JFROG_PRODUCTION_REPO}</jfrog.production.repo>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- Resolve dependencies/plugins through an Artifactory Maven virtual repository. -->
+  <repositories>
+    <repository>
+      <id>jfrog-maven-virtual</id>
+      <name>JFrog Maven Virtual</name>
+      <url>${jfrog.url}/artifactory/${jfrog.resolve.repo}</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>jfrog-maven-virtual</id>
+      <name>JFrog Maven Plugin Virtual</name>
+      <url>${jfrog.url}/artifactory/${jfrog.resolve.repo}</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <!--
+    Maven deploy target:
+      * non-SNAPSHOT versions -> release-candidate repository
+      * SNAPSHOT versions     -> snapshot repository
+
+    QA-approved release artifacts are promoted (copied byte-for-byte) from the
+    candidate repository to JFROG_PRODUCTION_REPO. Credentials stay in
+    settings.xml/Jenkins credentials, never in this POM.
+  -->
+  <distributionManagement>
+    <repository>
+      <id>jfrog-release-candidates</id>
+      <name>JFrog VAT Release Candidates</name>
+      <url>${jfrog.url}/artifactory/${jfrog.candidate.repo}</url>
+    </repository>
+    <snapshotRepository>
+      <id>jfrog-snapshots</id>
+      <name>JFrog VAT Snapshots</name>
+      <url>${jfrog.url}/artifactory/${jfrog.snapshot.repo}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <build>
+    <finalName>vat-processing-service-${project.version}</finalName>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-modern-build-toolchain</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[${maven.minimum.version},4.0.0)</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>[25,26)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+          <excludes>
+            <exclude>**/*IT.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.example.vat.app.VatApplication</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <manifestEntries>
+              <Implementation-Version>${project.version}</Implementation-Version>
+              <Build-Revision>${env.GIT_COMMIT}</Build-Revision>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <project.basedir>${project.basedir}</project.basedir>
+            <project.build.directory>${project.build.directory}</project.build.directory>
+            <project.build.finalName>${project.build.finalName}</project.build.finalName>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Maven CI-friendly ${revision} must be flattened before install/deploy. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.8.0</version>
+        <configuration>
+          <updatePomFile>true</updatePomFile>
+          <flattenMode>resolveCiFriendliesOnly</flattenMode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals><goal>flatten</goal></goals>
+          </execution>
+          <execution>
+            <id>flatten-clean</id>
+            <phase>clean</phase>
+            <goals><goal>clean</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.2.0</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,12 @@
+{
+  "invoiceCount": 15,
+  "netTotal": "7463.88",
+  "vatTotal": "815.71",
+  "grossTotal": "8279.59",
+  "reverseChargeNet": "2165.00",
+  "countryVatTotals": {
+    "DE": "299.55",
+    "FR": "237.85",
+    "GB": "278.31"
+  }
+}

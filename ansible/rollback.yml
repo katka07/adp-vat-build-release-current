@@ -1,0 +1,17 @@
+---
+- name: Roll back VAT to an explicitly approved previous version
+  hosts: all
+  gather_facts: true
+  serial: 1
+  pre_tasks:
+    - name: Require rollback version
+      assert:
+        that:
+          - rollback_version is defined
+          - rollback_version | length > 0
+        fail_msg: "Pass -e rollback_version=<approved-version>"
+  roles:
+    - role: vat_release
+      vars:
+        release_version: "{{ rollback_version }}"
+        jfrog_repo: "{{ lookup('env', 'JFROG_PRODUCTION_REPO') }}"

@@ -1,0 +1,26 @@
+---
+- name: Emergency rollback to the release active immediately before deployment
+  hosts: all
+  gather_facts: false
+  vars:
+    vat_app_root: /opt/vat
+  tasks:
+    - name: Resolve previous release
+      become: true
+      command: "readlink -f {{ vat_app_root }}/previous"
+      register: previous_release
+      changed_when: false
+
+    - name: Require previous release pointer
+      assert:
+        that:
+          - previous_release.stdout | length > 0
+          - previous_release.stdout != vat_app_root + '/previous'
+
+    - name: Switch current back to previous release
+      become: true
+      file:
+        src: "{{ previous_release.stdout }}"
+        dest: "{{ vat_app_root }}/current"
+        state: link
+        force: true

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.vat.qasqa</groupId>
+  <artifactId>vat-qa-sqa-qualification</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>25</maven.compiler.release>
+    <vat.version>REQUIRED</vat.version>
+    <jfrog.url>${env.JFROG_URL}</jfrog.url>
+    <jfrog.qa.repo>${env.JFROG_QA_SOURCE_REPO}</jfrog.qa.repo>
+    <jfrog.resolve.repo>${env.JFROG_MAVEN_VIRTUAL_REPO}</jfrog.resolve.repo>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>jfrog-release-candidates</id>
+      <url>${jfrog.url}/artifactory/${jfrog.qa.repo}</url>
+    </repository>
+    <repository>
+      <id>jfrog-maven-virtual</id>
+      <url>${jfrog.url}/artifactory/${jfrog.resolve.repo}</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>jfrog-maven-virtual</id>
+      <url>${jfrog.url}/artifactory/${jfrog.resolve.repo}</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-modern-qa-toolchain</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion><version>[3.10.0,4.0.0)</version></requireMavenVersion>
+                <requireJavaVersion><version>[25,26)</version></requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.11.0</version>
+        <executions>
+          <execution>
+            <id>fetch-candidate-under-test</id>
+            <phase>process-test-resources</phase>
+            <goals><goal>copy</goal></goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.example.vat</groupId>
+                  <artifactId>vat-processing-service</artifactId>
+                  <version>${vat.version}</version>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/artifact</outputDirectory>
+                  <destFileName>vat-under-test.jar</destFileName>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <includes><include>**/*IT.java</include></includes>
+          <systemPropertyVariables>
+            <vat.jar>${project.build.directory}/artifact/vat-under-test.jar</vat.jar>
+            <qa.data>${project.basedir}/data/qa-invoices.csv</qa.data>
+            <qa.expected>${project.basedir}/data/expected-qa-vat-return.json</qa.expected>
+            <expected.version>${vat.version}</expected.version>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>integration-test</goal><goal>verify</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
