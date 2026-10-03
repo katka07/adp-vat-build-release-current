@@ -7,11 +7,6 @@ def requireNonBlank(String name, String value) {
 pipeline {
     agent { label 'work-agent' }
 
-    tools {
-        jdk 'jdk25'
-        maven 'maven-3.10.0'
-    }
-
     options {
         timestamps()
         disableConcurrentBuilds()
