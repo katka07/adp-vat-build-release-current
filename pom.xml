@@ -97,7 +97,7 @@
                   <version>[${maven.minimum.version},4.0.0)</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>[25,26)</version>
+                  <version>[17,18)</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
