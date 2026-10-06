@@ -117,13 +117,13 @@ pipeline {
                     usernameVariable: 'JFROG_USERNAME',
                     passwordVariable: 'JFROG_TOKEN'
                 )]) {
-                    withSonarQubeEnv('sonarqube') {
+                    withSonarQubeEnv('SonarQube') {
                         sh '''#!/bin/bash
                             set -euo pipefail
                             mvn -B -s "$MAVEN_SETTINGS" \
                               -Drevision="$APP_VERSION" \
                               -DskipTests \
-                              sonar:sonar
+                              mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar
                         '''
                     }
                 }
