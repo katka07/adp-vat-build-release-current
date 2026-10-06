@@ -15,9 +15,9 @@
   <properties>
     <!-- Safe local default comes from .mvn/maven.config. Production CI overrides -Drevision. -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>25</maven.compiler.release>
-    <junit.version>6.1.2</junit.version>
-    <maven.minimum.version>3.10.0</maven.minimum.version>
+    <maven.compiler.release>17</maven.compiler.release>
+    <junit.version>5.10.2</junit.version>
+    <maven.minimum.version>3.8.0</maven.minimum.version>
 
     <!-- JFrog endpoint/repository names are injected by environment/Jenkins, not secrets. -->
     <jfrog.url>${env.JFROG_URL}</jfrog.url>

@@ -29,10 +29,10 @@ pipeline {
         DEPLOY_SSH_CREDENTIALS_ID = 'vat-deploy-ssh'
         JFROG_CLI_HOME_DIR = "${WORKSPACE}/.jfrog-ci"
         JFROG_URL = 'http://192.168.100.66:8082'
-        JFROG_MAVEN_VIRTUAL_REPO = 'example-repo-local/ci_repo'
-        JFROG_CANDIDATE_REPO = 'example-repo-local/candidate_repo'
-        JFROG_SNAPSHOT_REPO = 'example-repo-local/snapshot_repo'
-        JFROG_PRODUCTION_REPO = 'example-repo-local/production_repo'
+        JFROG_MAVEN_VIRTUAL_REPO = 'ci_repo'
+        JFROG_CANDIDATE_REPO     = 'candidate_repo'
+        JFROG_SNAPSHOT_REPO      = 'snapshot_repo'
+        JFROG_PRODUCTION_REPO    = 'production_repo'
 
 
     }
@@ -89,8 +89,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sh '''#!/bin/bash
                         set -euo pipefail
@@ -114,8 +114,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     withSonarQubeEnv('sonarqube') {
                         sh '''#!/bin/bash
@@ -165,8 +165,8 @@ pipeline {
                 }
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sshagent(credentials: [env.DEPLOY_SSH_CREDENTIALS_ID]) {
                         sh '''#!/bin/bash
@@ -190,8 +190,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sh '''#!/bin/bash
                         set -euo pipefail
@@ -230,15 +230,15 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sh '''#!/bin/bash
                         set -euo pipefail
                         rm -rf "$JFROG_CLI_HOME_DIR"
                         jf config add vat-ci \
                           --url="$JFROG_URL" \
-                          --access-token="$JFROG_PASS" \
+                          --access-token="$JFROG_TOKEN" \
                           --interactive=false
                         jf rt cp \
                           "${JFROG_CANDIDATE_REPO}/${MAVEN_VERSION_PATH}/" \
@@ -262,8 +262,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sshagent(credentials: [env.DEPLOY_SSH_CREDENTIALS_ID]) {
                         script {
@@ -309,8 +309,8 @@ pipeline {
                 input message: "Roll production back to approved version ${params.ROLLBACK_VERSION}?", ok: 'Rollback'
                 withCredentials([usernamePassword(
                     credentialsId: env.JFROG_CREDENTIALS_ID,
-                    usernameVariable: 'JFROG_USER',
-                    passwordVariable: 'JFROG_PASS'
+                    usernameVariable: 'JFROG_USERNAME',
+                    passwordVariable: 'JFROG_TOKEN'
                 )]) {
                     sshagent(credentials: [env.DEPLOY_SSH_CREDENTIALS_ID]) {
                         sh '''#!/bin/bash
